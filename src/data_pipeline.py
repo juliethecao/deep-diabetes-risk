@@ -70,7 +70,7 @@ def split_features(df):
     return X, y
 
 # Normalize the features that don't have binary labels
-def normalize_numeric_features(X):
+def normalize_numeric_features(X_train, X_val, X_test):
 
     numeric_cols = [
         "BMI",
@@ -84,9 +84,12 @@ def normalize_numeric_features(X):
 
     scaler = StandardScaler()
 
-    X[numeric_cols] = scaler.fit_transform(X[numeric_cols])
+    X_train[numeric_cols] = scaler.fit_transform(X_train[numeric_cols])
+     # Apply same transformation to val/test
+    X_val[numeric_cols] = scaler.transform(X_val[numeric_cols])
+    X_test[numeric_cols] = scaler.transform(X_test[numeric_cols])
 
-    return X, scaler
+    return X_train, X_val, X_test, scaler
 
 # Create train, test, validation sets (subject to change)
 def create_splits(X, y):
@@ -113,7 +116,7 @@ def create_splits(X, y):
 def to_tensor(X, y):
 
     X_tensor = torch.tensor(X.values, dtype=torch.float32)
-    y_tensor = torch.tensor(y.values, dtype=torch.float32).unsqueeze(1)
+    y_tensor = torch.tensor(y.values, dtype=torch.long)
 
     return X_tensor, y_tensor
 
@@ -125,17 +128,23 @@ def main():
     inspect_data(df)
 
     X, y = split_features(df)
-
-    X, scaler = normalize_numeric_features(X)
-
+    
     X_train, X_val, X_test, y_train, y_val, y_test = create_splits(X, y)
+
+    X_train, X_val, X_test, scaler = normalize_numeric_features(
+        X_train,
+        X_val,
+        X_test
+    )
 
     X_train, y_train = to_tensor(X_train, y_train)
     X_val, y_val = to_tensor(X_val, y_val)
     X_test, y_test = to_tensor(X_test, y_test)
 
     print("\nTensor shapes:")
-    print(X_train.shape, y_train.shape)
+    print("Train:", X_train.shape, y_train.shape)
+    print("Val:", X_val.shape, y_val.shape)
+    print("Test:", X_test.shape, y_test.shape)
     
     save_tensor_dataset(X_train, y_train, "train.pt")
     save_tensor_dataset(X_val, y_val, "val.pt")
